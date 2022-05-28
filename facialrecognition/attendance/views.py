@@ -1,4 +1,5 @@
 from datetime import datetime
+from urllib import response
 from django.db import IntegrityError
 from django.http import HttpResponse, HttpResponseRedirect
 from django.contrib.auth import authenticate, login, logout
@@ -7,14 +8,16 @@ from django.shortcuts import render
 from django.urls import reverse
 import os
 import cv2
+import xlwt
 
 from .models import User, Student, Course, Attendance, Class
 from .forms import StudentForm, CourseForm, ClassForm
+from .utils import message
 from .facialrecognition import face_match, face_encode
 
 # Create your views here.
 
-last_face = ["", ""]
+last_face = ["", -1]
 face_encodings = []
 
 
@@ -53,7 +56,7 @@ def login_view(request):
     else:
         return render(request, "attendance/login.html")
 
-
+@login_required
 def logout_view(request):
     logout(request)
     return HttpResponseRedirect(reverse("index"))
@@ -90,6 +93,7 @@ def register(request):
         return render(request, "attendance/register.html")
 
 
+@login_required
 def addcourse(request):
     user = request.user
     if request.method == "POST":
@@ -106,12 +110,13 @@ def addcourse(request):
     return render(request, "attendance/addcourse.html", {"form": form})
 
 
+@login_required
 def delcourse(request, course_id):
     course = Course.objects.get(pk=course_id)
     course.delete()
     return HttpResponseRedirect(reverse("index"))
 
-
+@login_required
 def course(request, course_id):
     course = Course.objects.get(pk=course_id)
     
@@ -125,15 +130,18 @@ def course(request, course_id):
         },
     )
 
+@login_required
 def students(request, course_id):
     course = Course.objects.get(pk=course_id)
     students = course.students.all()
     return render(
         request,
         "attendance/students.html",
-        {"students": students}
+        {"students": students,
+        "course": course,}
     )
 
+@login_required
 def addstudent(request, course_id):
     course = Course.objects.get(pk=course_id)
     if request.method == "POST":
@@ -151,13 +159,24 @@ def addstudent(request, course_id):
     student_form = StudentForm()
     return render(request, "attendance/addstudent.html", {"student_form": student_form})
 
-
+@login_required
 def delstudent(request, course_id, student_id):
     student = Student.objects.get(pk=student_id)
     student.delete()
     return HttpResponseRedirect(reverse("course", args=[course_id]))
 
+@login_required
+def classes(request, course_id):
+    course = Course.objects.get(pk=course_id)
+    classes = course.classes.all()
+    return render(
+        request,
+        "attendance/classes.html",
+        {"classes": classes,
+        "course": course,}
+    )
 
+@login_required
 def addclass(request, course_id):
     course = Course.objects.get(pk=course_id)
     if request.method == "POST":
@@ -165,7 +184,7 @@ def addclass(request, course_id):
         if form.is_valid():
             class_data = form.cleaned_data
             class_obj = Class(
-                course=course, date=class_data["date"], time=class_data["time"]
+                course=course, topic = class_data["topic"]
             )
             class_obj.save()
             students = course.students.all()
@@ -174,34 +193,38 @@ def addclass(request, course_id):
                     student=student, class_taken=class_obj, status=False
                 )
                 attendance.save()
-            return HttpResponseRedirect(reverse("index"))
+            return HttpResponseRedirect(reverse("attendance", args=[class_obj.id]))
     class_form = ClassForm()
-    return HttpResponseRedirect(reverse("attendance", args=[course_id]))
+    #return HttpResponseRedirect(reverse("attendance", args=[course_id]))
+    return render(request, "attendance/addclass.html", {"class_form": class_form})
 
-
+@login_required
 def markAttendance(request, class_id):
     global last_face
+    global face_encodings
     class_taken = Class.objects.get(pk=class_id)
     students = class_taken.course.students.all()
     index = face_match(face_encodings)
     try:
         student = students[index]
         attendance = Attendance.objects.get(student=student, class_taken=class_taken)
-        attendance.present = True
+        attendance.status = True
         attendance.time = datetime.now()
         attendance.save()
-        last_face = [student]
+        last_face = [student.name, 1]
     except IndexError:
-        last_face = [-1]
+        last_face[1] = 0
     return HttpResponseRedirect(reverse("attendance", args=[class_id]))
 
-
+@login_required
 def attendance(request, class_id):
-    global face_encodings
+    global face_encodings, last_face
     class_taken = Class.objects.get(pk=class_id)
     course = class_taken.course
     students = class_taken.course.students.all()
     paths = []
+    face_encodings = []
+    alert = message(last_face)
     for student in students:
         path = rf"C:/Users/malav/facial-recognition-attendance-system/facialrecognition/{student.pic.url}"
         paths.append(path)
@@ -209,8 +232,51 @@ def attendance(request, class_id):
     return render(
         request,
         "attendance/attendance.html",
-        {"class_taken": class_taken, "course": course},
+        {"class_taken": class_taken, "course": course, "alert1": alert[0], "alert2": alert[1]
+        }, 
     )
 
-def exportAttendance(request):
-    pass
+@login_required
+def exportAttendance(request, class_id):
+    response = HttpResponse(content_type="application/ms-excel")
+    class_taken = Class.objects.get(pk=class_id)
+    course = class_taken.course
+    response['Content-Disposition'] = 'attachment; filename=attendance' + \
+        str(class_taken.course.name) + '.' + str(class_taken.date) + '.xls'
+    wb = xlwt.Workbook(encoding='utf-8')
+    ws = wb.add_sheet('Attendance')
+    row_num = 0
+    font_style = xlwt.XFStyle()
+    font_style.font.bold = True
+    columns = ['Name', 'Roll No', 'Present', 'Time']
+
+    for col_num in range(len(columns)):
+        ws.write(row_num, col_num, columns[col_num], font_style)
+
+    font_style = xlwt.XFStyle()
+
+    attendance_list = Attendance.objects.filter(class_taken=class_taken)
+
+    rows = []
+
+    for attendance in attendance_list:
+        present = "Present" if attendance.status else "Absent"
+        rows.append(
+            [
+                attendance.student.name,
+                attendance.student.roll_no,
+                present,
+                str(attendance.time),
+            ]
+        )
+
+    for row in rows:
+        row_num += 1
+        
+        for col_num in range(len(row)):
+            ws.write(row_num, col_num, str(row[col_num]), font_style)
+
+    wb.save(response)
+
+    return response
+
