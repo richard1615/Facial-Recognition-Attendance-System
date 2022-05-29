@@ -1,13 +1,10 @@
 from datetime import datetime
-from urllib import response
 from django.db import IntegrityError
 from django.http import HttpResponse, HttpResponseRedirect
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 from django.urls import reverse
-import os
-import cv2
 import xlwt
 
 from .models import User, Student, Course, Attendance, Class
@@ -25,11 +22,13 @@ def index(request):
     user = request.user
     if user.is_authenticated:
         user = request.user
-        courses = Course.objects.filter(instructor=user)
+        courses = Course.objects.filter(instructor=user, is_archived=False)
+        archived_courses = Course.objects.filter(instructor=user, is_archived=True)
+        class_form = CourseForm()
         return render(
             request,
             "attendance/dashboard.html",
-            {"courses": courses, "username": user.username},
+            {"courses": courses, "username": user.username, "class_form": class_form, "archived_courses": archived_courses},
         )
     else:
         return render(request, "attendance/login.html")
@@ -117,9 +116,16 @@ def delcourse(request, course_id):
     return HttpResponseRedirect(reverse("index"))
 
 @login_required
+def archive_course(request, course_id):
+    course = Course.objects.get(pk=course_id)
+    course.is_archived = True
+    course.save()
+    return HttpResponseRedirect(reverse("index"))
+
+@login_required
 def course(request, course_id):
     course = Course.objects.get(pk=course_id)
-    
+    class_form = ClassForm()
     classes = course.classes.all()
     return render(
         request,
@@ -127,6 +133,7 @@ def course(request, course_id):
         {
             "course": course,
             "classes": classes,
+            "class_form": class_form,
         },
     )
 
@@ -240,7 +247,6 @@ def attendance(request, class_id):
 def exportAttendance(request, class_id):
     response = HttpResponse(content_type="application/ms-excel")
     class_taken = Class.objects.get(pk=class_id)
-    course = class_taken.course
     response['Content-Disposition'] = 'attachment; filename=attendance' + \
         str(class_taken.course.name) + '.' + str(class_taken.date) + '.xls'
     wb = xlwt.Workbook(encoding='utf-8')
