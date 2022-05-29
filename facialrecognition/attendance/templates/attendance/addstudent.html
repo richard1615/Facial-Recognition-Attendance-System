@@ -1,4 +1,5 @@
 {% extends 'attendance/layout.html' %}
+{%load crispy_forms_tags %} 
 
 {% block navbar %}{% endblock navbar %}
 
@@ -8,7 +9,7 @@
 <span>Enroll new Student</span>
 <form action="{% url 'addstudent' course.id %}" enctype="multipart/form-data" method="POST">
     {% csrf_token %}
-    {{ student_form.as_p }}
+    {{ student_form|crispy }}
     <input type="submit" name="submit" value="Enroll">
 </form>
 {% endblock body %}

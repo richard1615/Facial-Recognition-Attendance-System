@@ -16,6 +16,7 @@
         <th scope="col">Date</th>
         <th scope="col">Time</th>
         <th scope="col">Topic Taken</th>
+        <th>Attendance Percent</th>
         <th scope="col"></th>
       </tr>
     </thead>
@@ -25,6 +26,7 @@
         <td>{{ class.date }}</td>
         <td>{{ class.time }}</td>
         <td>{{ class.topic }}</td>
+        <td>{{ class.attendancepercentage }}%</td>
         <td><a href="{% url 'export_excel' class.id %}">Export Attendance as Excel</a></td>
       </tr>
       {% endfor %}
