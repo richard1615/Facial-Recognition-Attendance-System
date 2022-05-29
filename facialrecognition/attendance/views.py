@@ -126,7 +126,8 @@ def archive_course(request, course_id):
 def course(request, course_id):
     course = Course.objects.get(pk=course_id)
     class_form = ClassForm()
-    classes = course.classes.all()
+    classes = course.classes.all().count()
+    students = course.students.all().count()
     return render(
         request,
         "attendance/course.html",
@@ -134,6 +135,7 @@ def course(request, course_id):
             "course": course,
             "classes": classes,
             "class_form": class_form,
+            "students": students,
         },
     )
 
@@ -188,6 +190,7 @@ def classes(request, course_id):
 @login_required
 def addclass(request, course_id):
     course = Course.objects.get(pk=course_id)
+    #add a class to the course
     if request.method == "POST":
         form = ClassForm(request.POST)
         if form.is_valid():
@@ -204,7 +207,6 @@ def addclass(request, course_id):
                 attendance.save()
             return HttpResponseRedirect(reverse("attendance", args=[class_obj.id]))
     class_form = ClassForm()
-    #return HttpResponseRedirect(reverse("attendance", args=[course_id]))
     return render(request, "attendance/addclass.html", {"class_form": class_form})
 
 @login_required
@@ -213,7 +215,9 @@ def markAttendance(request, class_id):
     global face_encodings
     class_taken = Class.objects.get(pk=class_id)
     students = class_taken.course.students.all()
+    #match the face
     index = face_match(face_encodings)
+    #Update the attendance
     try:
         student = students[index]
         attendance = Attendance.objects.get(student=student, class_taken=class_taken)
@@ -230,13 +234,16 @@ def attendance(request, class_id):
     global face_encodings, last_face
     class_taken = Class.objects.get(pk=class_id)
     course = class_taken.course
+    #get the list of all students taking the course
     students = class_taken.course.students.all()
     paths = []
     face_encodings = []
     alert = message(last_face)
+    #get the images of all the students
     for student in students:
         path = rf"C:/Users/malav/facial-recognition-attendance-system/facialrecognition/{student.pic.url}"
         paths.append(path)
+    #encode the images
     face_encodings = face_encode(paths)
     return render(
         request,
@@ -247,6 +254,7 @@ def attendance(request, class_id):
 
 @login_required
 def exportAttendance(request, class_id):
+    #create and set the settings for the excel sheet
     response = HttpResponse(content_type="application/ms-excel")
     class_taken = Class.objects.get(pk=class_id)
     response['Content-Disposition'] = 'attachment; filename=attendance' + \
@@ -262,11 +270,11 @@ def exportAttendance(request, class_id):
         ws.write(row_num, col_num, columns[col_num], font_style)
 
     font_style = xlwt.XFStyle()
-
+    #get the attendance list for the class
     attendance_list = Attendance.objects.filter(class_taken=class_taken)
 
     rows = []
-
+    #write the data into the excel sheet
     for attendance in attendance_list:
         present = "Present" if attendance.status else "Absent"
         rows.append(

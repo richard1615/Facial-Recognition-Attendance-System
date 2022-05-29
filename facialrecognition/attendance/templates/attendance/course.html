@@ -13,13 +13,9 @@
     <br>
     Code: {{ course.code }}
     <br>
-    Description: {{ course.description }}
+    Number of students enrolled: {{ students}}
     <br>
-    Period: 
-    <br>
-    Number of students enrolled: 
-    <br>
-    Number of classes taken:
+    Number of classes taken: {{ classes }}
     <br>
     <div class="container">
     <a href="{% url 'delcourse' course.id %}"><button class="btn btn-danger">Remove Course</button></a>

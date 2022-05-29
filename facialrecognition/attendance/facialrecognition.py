@@ -12,13 +12,16 @@ def face_encode(paths):
 
     encodeList = []
     for img in images:
+        #convert image to rgb
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        #encode image
         encode = face_recognition.face_encodings(img)[0]
+        #append it to the list
         encodeList.append(encode)
     return encodeList
 
 def face_match(encodeListKnown):
-    
+    #get webcam
     cap = cv2.VideoCapture(0)
 
     timeout = 60   # [seconds]
@@ -32,13 +35,13 @@ def face_match(encodeListKnown):
 
         facesCurFrame = face_recognition.face_locations(imgS)
         encodesCurFrame = face_recognition.face_encodings(imgS, facesCurFrame)
-
+        #compare webcam with known faces
         for encodeFace, faceLoc in zip(encodesCurFrame, facesCurFrame):
             matches = face_recognition.compare_faces(encodeListKnown, encodeFace)
             faceDis = face_recognition.face_distance(encodeListKnown, encodeFace)
             print(faceDis)
             matchIndex = np.argmin(faceDis)
-
+            #if match return index
             if matches[matchIndex]:
                 y1, x2, y2, x1 = faceLoc
                 y1, x2, y2, x1 = y1 * 4, x2 * 4, y2 * 4, x1 * 4
