@@ -59,4 +59,4 @@ This application allows users to keep track of attendance in classes taken by th
 7. Go to http://127.0.0.1:8000/ in your browser
 ## Credit
 
-Facial recognition - 
+Facial recognition - https://www.youtube.com/watch?v=sz25xxF_AVE&t=2625s
