@@ -218,14 +218,14 @@ def markAttendance(request, class_id):
     #match the face
     index = face_match(face_encodings)
     #Update the attendance
-    try:
+    if index != -1:
         student = students[index]
         attendance = Attendance.objects.get(student=student, class_taken=class_taken)
         attendance.status = True
         attendance.time = datetime.now()
         attendance.save()
         last_face = [student.name, 1]
-    except IndexError:
+    else:
         last_face[1] = 0
     return HttpResponseRedirect(reverse("attendance", args=[class_id]))
 
