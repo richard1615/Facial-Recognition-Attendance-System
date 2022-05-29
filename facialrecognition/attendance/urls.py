@@ -18,6 +18,9 @@ urlpatterns = [
         views.delstudent,
         name="delstudent",
     ),
+    path(
+        "addstudent/<int:course_id>", views.addstudent, name="addstudent"
+    ),
     path("addclass/<int:course_id>", views.addclass, name="addclass"),
     path("attendance/<int:class_id>", views.attendance, name="attendance"),
     path("markattendance/<int:class_id>", views.markAttendance, name="markattendance"),

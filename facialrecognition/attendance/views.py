@@ -141,11 +141,13 @@ def course(request, course_id):
 def students(request, course_id):
     course = Course.objects.get(pk=course_id)
     students = course.students.all()
+    student_form = StudentForm()
     return render(
         request,
         "attendance/students.html",
         {"students": students,
-        "course": course,}
+        "course": course,
+        "student_form": student_form,}
     )
 
 @login_required
