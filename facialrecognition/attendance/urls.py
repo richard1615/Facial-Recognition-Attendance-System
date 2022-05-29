@@ -22,5 +22,5 @@ urlpatterns = [
     path("attendance/<int:class_id>", views.attendance, name="attendance"),
     path("markattendance/<int:class_id>", views.markAttendance, name="markattendance"),
     path("export_excel/<int:class_id>", views.exportAttendance, name="export_excel"),
-
+    path("end_session/<int:course_id>/<int:class_id>", views.end_session, name="end_session"),
 ]

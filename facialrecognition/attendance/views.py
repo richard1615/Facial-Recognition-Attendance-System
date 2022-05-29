@@ -286,3 +286,16 @@ def exportAttendance(request, class_id):
 
     return response
 
+def end_session(request, course_id, class_id):
+    class_taken = Class.objects.get(pk=class_id)
+    #calculate attendance percentage
+    attendance_list = Attendance.objects.filter(class_taken=class_taken)
+    total_students = class_taken.course.students.all().count()
+    present_students = attendance_list.filter(status=True).count()
+    percentage = (present_students/total_students)*100
+    #update attendance percentage
+    class_taken.attendancepercentage = percentage
+    #close the class
+    class_taken.status = False
+    class_taken.save()
+    return HttpResponseRedirect(reverse("classes", args=[course_id]))

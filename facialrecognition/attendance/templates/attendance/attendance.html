@@ -1,0 +1,23 @@
+{% extends 'attendance/layout.html' %}
+
+{% block navbar %}
+{% endblock navbar %}
+
+{% block body %}
+  <div class="card text-center">
+    <div class="card-header">
+        {{ class_taken.course.code }}
+    </div>
+    <div class="card-body">
+      <h5 class="card-title">{{ class_taken.course.name }}</h5>
+      <p class="card-text">{{ class_taken.topic }}</p>
+      <a href="{% url 'markattendance' class_taken.id %}"><button class="btn btn-primary">Mark Attendance</button></a>
+      <a href="{% url 'end_session' course.id class_taken.id %}"href=""><button class="btn btn-danger">End Session</button> </a>
+      <p class="card-text">{{ alert1 }}</p>
+      <p class="card-text">{{ alert2 }}</p>
+    </div>
+    <div class="card-footer text-muted">
+        {{ class_taken.date }}, {{ class_taken.time }}
+    </div>
+  </div>
+{% endblock body %}
